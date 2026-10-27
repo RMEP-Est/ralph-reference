@@ -109,7 +109,7 @@ Two of those sections carry more weight than their size suggests:
 
 The bar for done: a fresh engineer with zero context beyond the repo and the PRD could implement everything without asking a single question.
 
-**Two grilling skills, two jobs.** `prd-grill` produces the PRD. `grill-me` is its lighter sibling: a one-question-at-a-time interview that stress-tests a plan or thesis and produces no document. Use `grill-me` when the idea is still fuzzy and you want your assumptions surfaced; move to `prd-grill` when you are ready to commit to a spec. Both are in `skills/`.
+**Two grilling skills, two jobs.** `prd-grill` produces the PRD. `grill-me` is its lighter sibling: an interview in small batches (up to four questions at a time, in Claude's interactive question box) that stress-tests a plan or thesis and produces no document. Use `grill-me` when the idea is still fuzzy and you want your assumptions surfaced; move to `prd-grill` when you are ready to commit to a spec. Both are in `skills/`.
 
 ## Step 2': Feedback into work items, for every round after the first
 
@@ -217,7 +217,7 @@ nohup ./.ralph/loop.sh > .ralph/logs/runner.log 2>&1 &
 README.md                          this document
 setup.sh                           installs skills/ into ~/.claude/skills
 skills/
-  grill-me/                        one-question-at-a-time plan stress-test (no output file)
+  grill-me/                        batched plan stress-test via the question box (no output file)
   prd-grill/                       batched interview that writes PRD.md
   feedback-to-todos/               raw feedback into one work-item file per request
     templates/work-item.md         the ticket shape the PRD points at
