@@ -1,6 +1,6 @@
 ---
 name: grill-me
-description: Run a relentless, one-question-at-a-time interview that stress-tests a plan, design, decision, memo, or deal thesis until every open branch is resolved and the user and Claude share the same understanding. Trigger whenever the user says "grill me", "/grill-me", "grill this", "interview me", "stress-test this plan", "poke holes in my thinking", "pressure-test this", "challenge me on this", "was übersehe ich", "löcher in meinen plan", or otherwise asks to be interrogated about a half-formed plan before committing to it. Also trigger when the user presents a rough plan and asks to have its assumptions surfaced rather than asking for a written deliverable. Do NOT use when the user wants a finished artifact (memo, spec, PRD, decision paper) — that is a different skill.
+description: Run a relentless interview, asked in small batches through Claude's interactive question box, that stress-tests a plan, design, decision, memo, or deal thesis until every open branch is resolved and the user and Claude share the same understanding. Trigger whenever the user says "grill me", "/grill-me", "grill this", "interview me", "stress-test this plan", "poke holes in my thinking", "pressure-test this", "challenge me on this", "was übersehe ich", "löcher in meinen plan", or otherwise asks to be interrogated about a half-formed plan before committing to it. Also trigger when the user presents a rough plan and asks to have its assumptions surfaced rather than asking for a written deliverable. Do NOT use when the user wants a finished artifact (memo, spec, PRD, decision paper) — that is a different skill.
 ---
 
 # Grill Me
@@ -15,28 +15,52 @@ Adapted from Matt Pocock's `grill-me` / `grilling` skills
 ## The mental model
 
 Every plan is a decision tree. Decisions depend on other decisions. The job is
-to walk down that tree node by node, resolving each dependency before moving to
-the ones that hang off it. An early answer often reshapes which questions come
-next — which is exactly why questions must not be batched.
+to walk down that tree in waves: each wave asks every question that does not
+depend on an unanswered one, then the answers reshape which questions come
+next. Batching independent questions saves round-trips; batching dependent ones
+destroys the ordering. Only the first is allowed.
+
+## How questions are asked
+
+Use the **`AskUserQuestion` tool** — Claude's interactive question box — for
+every batch. Do not type the questions into the chat as text when the tool is
+available.
+
+- **Up to 4 questions per batch** (the tool's limit). Fewer is fine; never pad a
+  batch to fill it.
+- **Every question in a batch must be independent.** If Q2's wording or options
+  would change depending on the answer to Q1, Q2 waits for the next batch.
+- **2–4 concrete options per question.** Put the recommended option first and
+  end its label with "(Recommended)". The option `description` carries the
+  one-line why and the trade-off. The tool adds "Other" automatically, so the
+  user can always override in free text — do not add an "Other" option yourself.
+- **`header`** is a short chip label (max 12 characters) naming the branch, e.g.
+  "Scope", "Exit route", "Pricing", "Timing".
+- **`multiSelect: true`** only when the choices genuinely stack (e.g. "Which of
+  these risks are real?"). Default to single-select.
+- **`preview`** is optional: use it when options are easier to compare side by
+  side (two term-sheet structures, two org charts, two code shapes).
+- **Fallback.** If the tool is not available in this surface, ask the same batch
+  as a numbered text list (Q1–Q4), each with its options and the recommended one
+  marked, and tell the user they can answer in shorthand ("Q1: a, Q2: agree").
 
 ## Rules of the interview
 
-1. **One question at a time.** Ask a single question, then stop and wait for the
-   answer. Never present a list. A batch of parallel questions destroys the
-   dependency ordering and overwhelms the user.
-2. **Always attach a recommended answer.** With every question, state what you
-   would choose and why, in one or two lines. The user should be reacting to a
-   proposal, not staring at a blank page.
+1. **Small batches, in dependency order.** One `AskUserQuestion` call per round,
+   at most 4 independent questions, then stop and wait for the answers.
+2. **Always attach a recommended answer.** Every question has a recommended
+   option first, with its reasoning in the description. The user should be
+   reacting to a proposal, not staring at a blank page.
 3. **Look it up before you ask it.** If a fact is discoverable from the
    environment — files, the repo, tools, connected systems, earlier messages —
    go and find it. Only genuine decisions get put to the user.
 4. **The decisions belong to the user.** Never resolve a judgement call on their
    behalf, and never quietly assume one to keep moving.
 5. **Be relentless, not agreeable.** A vague, hand-wavy, or internally
-   inconsistent answer gets pushed on again rather than accepted. Keep going
-   until the branch is genuinely closed.
-6. **Depth before breadth.** Follow one branch to its end, then return to the
-   trunk. Do not hop between unrelated topics.
+   inconsistent answer (including a thin "Other" reply) gets pushed on again in
+   the next batch rather than accepted. Keep going until the branch is closed.
+6. **Depth before breadth.** Keep each batch on one or two branches of the tree.
+   Do not mix unrelated topics just to fill four slots.
 7. **Do not start building.** No implementation, no drafting, no deliverable
    until the user confirms that shared understanding has been reached.
 
@@ -45,10 +69,13 @@ next — which is exactly why questions must not be batched.
 1. **Read the plan.** Take whatever the user brought — a paragraph, a doc, a
    deck, a repo, a half-thought — and map it into a decision tree. Do not show
    the tree; use it to sequence the interview.
-2. **Open with the root decision.** The one that constrains the most downstream
-   choices. Question + recommended answer.
-3. **Descend.** After each answer, re-evaluate the tree. New branches appear;
-   others become irrelevant. Ask the next question in dependency order.
+2. **Open with the root batch.** The decisions that constrain the most
+   downstream choices and do not depend on each other. Ask them in one
+   `AskUserQuestion` call.
+3. **Descend in waves.** After each batch, re-evaluate the tree. Collect every
+   branch the answers opened, drop the ones that became irrelevant, and ask the
+   next independent set. Before each batch, add one short line in the chat
+   saying roughly how many open decisions remain.
 4. **Probe the soft spots.** Priority targets:
    - Unstated assumptions presented as facts
    - Undefined terms that different people would read differently
